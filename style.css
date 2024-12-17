@@ -1,8 +1,12 @@
-<style>
         body {
+            background-color: #000000;
+            background-position: center top;
+            background-image: url('bg01.jpg');
+            background-repeat: no-repeat;
             font-family: Arial, sans-serif;
             margin: 20px;
         }
+
         #chatbox {
             border: 1px solid #ccc;
             padding: 10px;
@@ -49,4 +53,3 @@
             border-radius: 5px;
             cursor: pointer;
         }
-    </style>

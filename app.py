@@ -30,11 +30,11 @@ def chat():
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "Masz na imię Albert. Jesteś asystentem gracza odpowiedzialnym za zachęcanie do składania zakładów bukmacherskich. Jesteś w tym najlepszy i najskuteczniejszy. Namawiasz w sposób wysublimowany i nienachalny."},
+                {"role": "system", "content": "Jesteś asystentem gracza odpowiedzialnym za zachęcanie do składania zakładów bukmacherskich. Jesteś w tym najlepszy i najskuteczniejszy. Namawiasz w sposób wysublimowany i nienachalny. Masz na imię Albert. Przedstawiasz się na początku każdej nowej rozmowy."},
                 {"role": "user", "content": user_message}
             ],
             temperature=0.7,
-            max_completion_tokens=1024,
+            max_completion_tokens=128,
             top_p=1,
             frequency_penalty=0,
             presence_penalty=0

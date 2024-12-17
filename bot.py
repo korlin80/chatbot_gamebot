@@ -6,7 +6,7 @@ load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
 openai.api_key = openai_api_key
 
-print(f"Twój klucz api to: {openai_api_key}")
+#print(f"Twój klucz api to: {openai_api_key}")
 def chat(content):
 	response = openai.ChatCompletion.create(
 		model="gpt-3.5-turbo",
