@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Streaming</title>
+    <script>
+        async function sendMessage() {
+            const user_id = document.getElementById("user_id").value;
+            const messageInput = document.getElementById("message");
+            const message = messageInput.value;
+            const chatBox = document.getElementById("chat");
+
+            if (!message) return;
+
+            function addMessage(content, sender) {
+                const messageDiv = document.createElement("div");
+                messageDiv.classList.add("message", sender);
+                messageDiv.textContent = content;
+                chatBox.appendChild(messageDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+
+            //chatBox.innerHTML += `<div><b>Ty:</b> ${message}</div>`;
+            addMessage(message, "user")
+
+            messageInput.value = ""; // Czyści pole wiadomości
+
+            try {
+                const response = await fetch("/stream", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ message })
+                });
+
+                if (!response.ok) {
+                    throw new Error("Błąd serwera: " + response.statusText);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+
+                let fullMessage = ""; // Bufor na pełną wiadomość
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+
+                    // Usuń prefiks `data:` i ewentualne puste linie
+                    const cleanChunk = chunk
+                        .split("\n")
+                        .map(line => line.replace(/^data: /, ""))
+                        .filter(line => line) // Usuń puste linie
+                        .join("");
+
+                    fullMessage += cleanChunk; // Dodaj fragment do pełnej wiadomości
+                }
+
+                // Wyświetl pełną wiadomość po zakończeniu strumienia
+                //chatBox.innerHTML += `<div><b>Bot:</b> ${fullMessage}</div>`;
+                addMessage(fullMessage, "bot")
+
+            } catch (error) {
+                console.error("Wystąpił błąd:", error);
+            }
+        }
+
+</script>
+</head>
+<body>
+    <div>
+            <h1 style="text-align: center; color: orange">Chatbot GPT - GameBot</h1>
+            <div id="userChoice">
+                <form id="userForm">
+                    <select id="user_id" name="user_id">
+                        <option value="123">Paweł</option>
+                        <option value="456">Tomasz</option>
+                        <option value="789">Jan</option>
+                    </select>
+                </form>
+            </div>
+
+        <div id="chat"></div>
+        <div id="input-box">
+            <input type="text" id="message" placeholder="Wpisz wiadomość" />
+            <button onclick="sendMessage()">Wyślij</button>
+        </div>
+    </div>
+</body>
+</html>

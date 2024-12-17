@@ -1,8 +1,8 @@
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, stream_with_context, Response
 from flask_cors import CORS
 import openai
-import json
+#import json
 from dotenv import load_dotenv
 
 # Ładowanie klucza OpenAI
@@ -47,56 +47,74 @@ def chat():
     user_message = data.get("message", "").strip()
     user_id = data.get("user_id", "").strip()
 
-    if not user_message or not user_id:
-        return jsonify({"error": "Brak wiadomości lub ID użytkownika!"}), 400
+    if not user_message:
+        return jsonify({"error": "Brak wiadomości!"}), 400
+    if not user_id:
+        return jsonify({"error": "Brak ID użytkownika!"}), 400
 
-    # Wysyłanie wiadomości do GPT
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system",
-                 "content": "Jesteś asystentem gracza odpowiedzialnym za zachęcanie do składania zakładów bukmacherskich. Jesteś w tym najlepszy i najskuteczniejszy. Namawiasz w sposób wysublimowany i nienachalny. Masz na imię Albert. Wyrażasz się w sposób zwięzły i konkretny."},
-                {"role": "user", "content": user_message}
-            ],
-            temperature=0.7,
-            max_tokens=100,
-            top_p=1,
-            frequency_penalty=0,
-            presence_penalty=0,
-            functions=functions,
-            function_call="auto"
-        )
+    def generate():
+        # Wysyłanie wiadomości do GPT
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system",
+                    "content": "Jesteś asystentem gracza odpowiedzialnym za zachęcanie do składania zakładów bukmacherskich. Jesteś w tym najlepszy i najskuteczniejszy. Namawiasz w sposób wysublimowany i nienachalny. Masz na imię Albert. Wyrażasz się w sposób zwięzły i konkretny."},
+                    {"role": "user", "content": user_message}
+                ],
+                temperature=0.1,
+                max_tokens=100,
+                top_p=1,
+                frequency_penalty=0,
+                presence_penalty=0,
+                functions=functions,
+                function_call="auto",
+                stream = True
+            )
 
-        chatbot_message = response["choices"][0]["message"]
+            for chunk in response:
+                if 'choices' in chunk and len(chunk['choices']) > 0:
+#                    chatbot_message = response["choices"][0]["message"]
+                    text = chunk['choices'][0].get('delta', {}).get('content', '')
+                    if text:
+                        yield f"data: {text}\n\n"  # Przesyłanie fragmentów tekstu
 
-        if "function_call" in chatbot_message:
-            function_call = chatbot_message["function_call"]
+        except Exception as e:
+            yield f"data: Błąd: {str(e)}\n\n"
 
-            if function_call["name"] == "get_account_balance":
-                # Pobranie parametrów funkcji
-                arguments = json.loads(function_call["arguments"])
-                user_id = user_id
-                balance_info = get_account_balance(user_id)
+    # Użycie stream_with_context, aby przesłać odpowiedzi na stronę w czasie rzeczywistym
+        return Response(stream_with_context(generate()), content_type='text/event-stream')
 
-                if balance_info:
-                    # Zwrócenie stanu konta
-                    return jsonify({
-                        "reply": f"Stan Twojego konta wynosi {balance_info['balance']} {balance_info['currency']}."
-                    })
-                else:
-                    return jsonify({
-                        "reply": "Nie znaleziono konta dla podanego ID użytkownika."
-                    })
 
-        # Zwrócenie odpowiedzi GPT
-        chatbot_reply = chatbot_message.get("content", "Brak odpowiedzi od GPT.")
-        return jsonify({"reply": chatbot_reply})
+'''
+            if "function_call" in chatbot_message:
+                function_call = chatbot_message["function_call"]
 
-    except json.JSONDecodeError as e:
-        return jsonify({"error": "Błąd w parsowaniu argumentów funkcji: " + str(e)}), 500
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+                if function_call["name"] == "get_account_balance":
+                    # Pobranie parametrów funkcji
+                    arguments = json.loads(function_call["arguments"])
+                    user_id = user_id
+                    balance_info = get_account_balance(user_id)
+
+                    if balance_info:
+                        # Zwrócenie stanu konta
+                        return jsonify({
+                            "reply": f"Stan Twojego konta wynosi {balance_info['balance']} {balance_info['currency']}."
+                        })
+                    else:
+                        return jsonify({
+                            "reply": "Nie znaleziono konta dla podanego ID użytkownika."
+                        })
+
+            # Zwrócenie odpowiedzi GPT
+            chatbot_reply = chatbot_message.get("content", "Brak odpowiedzi od GPT.")
+            return jsonify({"reply": chatbot_reply})
+
+        except json.JSONDecodeError as e:
+            return jsonify({"error": "Błąd w parsowaniu argumentów funkcji: " + str(e)}), 500
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+'''
 
 # Uruchamianie serwera
 if __name__ == "__main__":
