@@ -9,11 +9,22 @@
 <body>
 
     <h1 style="text-align: center; color: orange">Chatbot GPT - GameBot</h1>
+    <div id="userChoice">
+        <form id="userForm">
+            <select id="user_id" name="user_id">
+                <option value="123">Paweł</option>
+                <option value="456">Tomasz</option>
+                <option value="789">Jan</option>
+            </select>
+        </form>
+    </div>
+
     <div id="chatbox"></div>
     <div id="input-box">
         <input type="text" id="user-input" placeholder="Wpisz wiadomość...">
         <button onclick="sendMessage()">Wyślij</button>
     </div>
+
     <style src="style.css"></style>
     <script>
         const chatbox = document.getElementById("chatbox");
@@ -24,41 +35,45 @@
             messageDiv.classList.add("message", sender);
             messageDiv.textContent = content;
             chatbox.appendChild(messageDiv);
-            chatbox.scrollTop = chatbox.scrollHeight; // przewijanie na dół
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+        // Clear chatbox
+        function clearMessages() {
+            pass
         }
 
         // Wysyłanie wiadomości do serwera
-        async function sendMessage() {
-            const userInput = document.getElementById("user-input");
-            const message = userInput.value.trim();
-            if (!message) return;
+ async function sendMessage() {
+    const userIdElement = document.getElementById("user_id");
+    const user_id = userIdElement.value; // Pobierz user_id
+    const userInput = document.getElementById("user-input");
+    const message = userInput.value.trim();
 
-            // Wyświetl wiadomość użytkownika
-            addMessage(message, "user");
+    if (!message) return;
 
-            // Wyczyść pole tekstowe
-            userInput.value = "";
+    addMessage(message, "user");
+    userInput.value = "";
 
-            try {
-                const response = await fetch("http://127.0.0.1:5000/chat", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ message }),
-                });
+    try {
+        const response = await fetch("http://127.0.0.1:5000/chat", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ message, user_id }), // Przesyłanie user_id
+        });
 
-                const data = await response.json();
+        const data = await response.json();
 
-                if (response.ok) {
-                    addMessage(data.reply, "bot");
-                } else {
-                    addMessage("Błąd: " + data.error, "bot");
-                }
-            } catch (error) {
-                addMessage("Błąd połączenia z serwerem!", "bot");
-            }
+        if (response.ok) {
+            addMessage(data.reply, "bot");
+        } else {
+            addMessage("Błąd: " + data.error, "bot");
         }
+    } catch (error) {
+        addMessage("Błąd połączenia z serwerem!", "bot");
+    }
+}
     </script>
 </body>
 </html>
