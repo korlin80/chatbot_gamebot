@@ -67,6 +67,31 @@
                 console.error("Wystąpił błąd:", error);
             }
         }
+        function clearMessages() {
+            const chatBox = document.getElementById("chat");
+            chatBox.innerHTML = ""; // Usuwa wszystkie wiadomości
+        }
+        document.addEventListener("DOMContentLoaded", () => {
+            // Nasłuchiwanie na naciśnięcie klawisza Enter w polu tekstowym
+            const messageInput = document.getElementById("message");
+            messageInput.addEventListener("keydown", (event) => {
+                if (event.key === "Enter") {
+                    event.preventDefault();  // Zapobiega domyślnej akcji Enter (np. przejście do nowej linii)
+                    sendMessage();           // Wysyła wiadomość
+                }
+            });
+            // Nasłuchiwanie na zmianę użytkownika
+            const userSelect = document.getElementById("userForm");
+            userSelect.addEventListener("change", () => {
+                clearMessages();  // Czyści wiadomości po zmianie użytkownika
+            });
+            // Funkcja obsługująca kliknięcie przycisku "Jaki jest mój stan konta?"
+            const accountButton = document.getElementById("account-button");
+            accountButton.addEventListener("click", () => {
+                sendMessage("Jaki jest mój stan konta?");  // Wysyła zapytanie o stan konta
+            });
+
+        });
 
 </script>
 </head>
@@ -87,6 +112,12 @@
         <div id="input-box">
             <input type="text" id="message" placeholder="Wpisz wiadomość" />
             <button onclick="sendMessage()">Wyślij</button>
+        </div>
+        <div id="clear-box">
+            <button onclick="clearMessages()">Wyczyść</button>
+        </div>
+        <div id="account-info">
+            <button id="account-button">Stan konta</button>
         </div>
     </div>
 </body>
