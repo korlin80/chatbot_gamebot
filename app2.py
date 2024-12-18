@@ -37,6 +37,14 @@ def get_user_info(user_id):
 
     }
     return users.get(user_id, None)  # Zwracaj None, jeśli konto nie istnieje
+def get_todays_games():
+    games = [
+        {"home_team": "Real Madrid", "away_team": "Barcelona", "time": "20:00"},
+        {"home_team": "Liverpool", "away_team": "Manchester United", "time": "18:00"},
+        {"home_team": "Juventus", "away_team": "Inter Milan", "time": "21:00"},
+    ]
+    return games
+
 
 
 # Funkcja dostępna dla GPT
@@ -70,7 +78,16 @@ functions = [
             },
             "required": ["user_id"]
         }
+    },
+    {
+        "name": "get_todays_games",
+        "description": "Pobierz listę dzisiejszych gier.",
+        "parameters": {}
     }
+
+
+
+
 ]
 
 # Strona główna
@@ -174,6 +191,17 @@ def stream():
                                 #system_message += f"Użytkownik ma na imię {user_info['name']} i ma {user_info['wiek']} lat."
                             else:
                                 yield f"data: Nie znaleziono użytkownika dla podanego ID.\n\n"
+                        if function_name == "get_todays_games":
+                            print("### Wywołano get_todays_games ###")
+                            games = get_todays_games()
+                            if games:
+                                yield "data: Oto lista dzisiejszych gier:\n\n\n"
+                                for game in games:
+                                    yield (
+                                        f"data: {game['home_team']} vs {game['away_team']} o godzinie {game['time']}.\n\n"
+                                    )
+                            else:
+                                yield f"data: Brak dzisiejszych gier.\n\n"
 
         except Exception as e:
             app.logger.error(f"Error: {str(e)}")

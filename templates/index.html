@@ -6,10 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chatbot Streaming</title>
     <script>
-        async function sendMessage() {
+        async function sendMessage(question="") {
             const user_id = document.getElementById("user_id").value;
             const messageInput = document.getElementById("message");
-            const message = messageInput.value;
+            const message = messageInput.value || question;
             const chatBox = document.getElementById("chat");
 
             if (!message) return;
@@ -22,11 +22,11 @@
                 chatBox.scrollTop = chatBox.scrollHeight;
             }
 
-            //chatBox.innerHTML += `<div><b>Ty:</b> ${message}</div>`;
-            addMessage(message, "user")
+            if (!question) {
+                addMessage(message, "user")
 
-            messageInput.value = ""; // Czyści pole wiadomości
-
+                messageInput.value = ""; // Czyści pole wiadomości
+            }    
             try {
                 const response = await fetch("/stream", {
                     method: "POST",
@@ -88,8 +88,16 @@
             // Funkcja obsługująca kliknięcie przycisku "Jaki jest mój stan konta?"
             const accountButton = document.getElementById("account-button");
             accountButton.addEventListener("click", () => {
-                sendMessage("Jaki jest mój stan konta?");  // Wysyła zapytanie o stan konta
+                sendMessage("Jaki jest mój stan konta?");
+                console.log("jaki jest mój stan konta?")  // Wysyła zapytanie o stan konta
             });
+            // Funkcja obsługująca kliknięcie przycisku "Today's games"
+            const todaysGamesButton = document.getElementById("todaysGames-button");
+            todaysGamesButton.addEventListener("click", () => {
+                sendMessage("Today's games");
+                console.log("Today's games")  // Wysyła zapytanie o dzisiejsze mecze
+            });
+
 
         });
 
@@ -113,11 +121,10 @@
             <input type="text" id="message" placeholder="Wpisz wiadomość" />
             <button onclick="sendMessage()">Wyślij</button>
         </div>
-        <div id="clear-box">
-            <button onclick="clearMessages()">Wyczyść</button>
-        </div>
-        <div id="account-info">
+        <div id="button-box">
+            <button id="clear" onclick="clearMessages()">Wyczyść</button>
             <button id="account-button">Stan konta</button>
+            <button id="todaysGames-button">Today's games</button>
         </div>
     </div>
 </body>

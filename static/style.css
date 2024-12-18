@@ -57,14 +57,14 @@
             display:flex;
             vertical-align:top;
         }
-        #clear-box {
+        #button-box {
             display: flex;
             justify-content: center;
             max-width: 600px;
             margin: 20px auto;
             overflow-y: auto;
         }  
-        #clear-box button {
+        #button-box button {
             padding: 10px 20px;
             margin-left: 10px;
             font-size: 16px;
