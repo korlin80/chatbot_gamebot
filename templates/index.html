@@ -33,7 +33,7 @@
                     headers: {
                         "Content-Type": "application/json"
                     },
-                    body: JSON.stringify({ message })
+                    body: JSON.stringify({ message:message, user_id:user_id })
                 });
 
                 if (!response.ok) {
@@ -49,8 +49,7 @@
                     const { done, value } = await reader.read();
                     if (done) break;
                     const chunk = decoder.decode(value, { stream: true });
-
-                    // Usuń prefiks `data:` i ewentualne puste linie
+                    console.log(chunk)
                     const cleanChunk = chunk
                         .split("\n")
                         .map(line => line.replace(/^data: /, ""))
