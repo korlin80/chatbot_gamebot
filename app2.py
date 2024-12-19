@@ -5,9 +5,12 @@ import openai
 import json
 from dotenv import load_dotenv
 
-# Ładowanie klucza OpenAI
+# Loading OpenAI key
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
+api_key = os.getenv("OPENAI_API_KEY")
+if not api_key:
+    raise ValueError("OPENAI_API_KEY environment variable is not set")
+openai.api_key = api_key
 
 app = Flask(__name__)
 
@@ -22,7 +25,7 @@ def get_account_balance(user_id):
         "789": {"balance": 0.00, "currency": "PLN"},
     }
 
-    return accounts.get(user_id, None)  # Zwracaj None, jeśli konto nie istnieje
+    return accounts.get(user_id, None)  # Return None if the account does not exist
 
 def get_user_info(user_id):
 
@@ -31,13 +34,16 @@ def get_user_info(user_id):
 
     users = {
 
-        "123": {"name": "Pawel", "wiek": 90},
-        "456": {"name": "Tomasz", "wiek": 20},
-        "789": {"name": "Krzysztof", "wiek": 30},
-
+        "123": {"name": "Pawel", "age": 90},
+        "456": {"name": "Tomasz", "age": 20},
+        "789": {"name": "Krzysztof", "age": 30},
     }
-    return users.get(user_id, None)  # Zwracaj None, jeśli konto nie istnieje
+
+    return users.get(user_id, None)  # Return None if the user does not exist
+
+    
 def get_todays_games():
+    # Those values should be sended to model as json
     games = [
         {"home_team": "Real Madrid", "away_team": "Barcelona", "time": "20:00"},
         {"home_team": "Liverpool", "away_team": "Manchester United", "time": "18:00"},
@@ -47,19 +53,19 @@ def get_todays_games():
 
 
 
-# Funkcja dostępna dla GPT
+# Functions handled by GPT
 
 functions = [
 
     {
         "name": "get_account_balance",
-        "description": "Sprawdź aktualny stan konta użytkownika.",
+        "description": "Check the current account balance of the user.",
         "parameters": {
             "type": "object",
             "properties": {
                 "user_id": {
                     "type": "string",
-                    "description": "ID użytkownika, dla którego chcesz sprawdzić stan konta."
+                    "description": "User ID for which you want to check the account balance."
                 }
             },
             "required": ["user_id"]
@@ -67,13 +73,13 @@ functions = [
     },
     {
         "name": "get_user_info",
-        "description": "Sprawdź informację o użytkowniku. Takie jak wiek, imię, itp.",
+        "description": "Check user information such as age, name, etc.",
         "parameters": {
             "type": "object",
             "properties": {
                 "user_id": {
                     "type": "string",
-                    "description": "ID użytkownika, dla którego chcesz sprawdzić informacje."
+                    "description": "User ID for which you want to check the information."
                 }
             },
             "required": ["user_id"]
@@ -81,16 +87,30 @@ functions = [
     },
     {
         "name": "get_todays_games",
-        "description": "Pobierz listę dzisiejszych gier.",
+        "description": "Get the list of today's games.",
         "parameters": {}
     }
 
-
-
-
 ]
 
-# Strona główna
+def prepareInformationsForAssisten(user_id):
+    # Function to prepare info about user as a string.
+    user = get_user_info(user_id)
+    if not user:
+        return "User not found for the given ID."
+    
+    user_info_str = f"User's name is {user['name']} and he is {user['age']} years old."
+    return user_info_str
+
+def prepareAccoutnInformationForAssisten(user_id):
+    acountInfo = get_account_balance(user_id)
+    if not acountInfo:
+        return "Account value not found for given ID."
+    account_info= f"User's account balance is {acountInfo['balance']} {acountInfo['currency']}"
+    return account_info
+
+
+# Main page
 
 @app.route("/")
 
@@ -98,34 +118,40 @@ def index():
     return render_template("index.html")
 
 
-# Endpoint do strumieniowania odpowiedzi
+# Endpoint for streaming responses
 
 @app.route("/stream", methods=["POST"])
 def stream():
     user_input = request.json.get("message", "").strip()
     user_id = request.json.get("user_id", "").strip()
 
+
     #print("User input :",user_input)
     #print("User Id :",user_id)
 
-    # Sprawdź, czy użytkownik podał wiadomość i ID użytkownika
+    # Check if the user provided a message and user ID
     if not user_input:
         return Response("Brak wiadomości", status=400)
     if not user_id:
         return Response("Brak user_id", status=400)
 
-    # Funkcja generatora do przesyłania strumienia
+    # Generator function for streaming
     def generate():
 
         asistent_info = (
-            "Jesteś asystentem gracza odpowiedzialnym za zachęcanie do składania zakładów bukmacherskich. "
-            "Jesteś w tym najlepszy i najskuteczniejszy. Namawiasz w sposób wysublimowany i nienachalny. "
-            "Masz na imię Albert. Wyrażasz się w sposób zwięzły i konkretny."
+            "You are a game assistant responsible for encouraging users to place bets. "
+            "You are the best and most effective at this. You persuade in a subtle and non-intrusive way. "
+            "Your name is Albert. You express yourself concisely and clearly."
         )
 
         system_message = (asistent_info)         
-        
-        
+        #add info about player.
+        #print("Zwrocona wartość: {prepareInformationsForAssisten}")
+        system_message += prepareInformationsForAssisten(user_id)
+        system_message += prepareAccoutnInformationForAssisten(user_id)
+
+        print(get_account_balance(user_id))
+        # get_user_info(user_id)
 
         try:
             response = openai.ChatCompletion.create(
@@ -151,26 +177,24 @@ def stream():
                 if "choices" in chunk and len(chunk["choices"]) > 0:
                     delta = chunk["choices"][0].get("delta", {})
 
-                    # Obsługa zawartości odpowiedzi
+                    # Handle response content
                     if "content" in delta:
                         yield f"data: {delta['content']}\n\n"
-                        #system_message += delta["content"]
 
-                    # Obsługa funkcji (np. get_account_balance)
+                    # Handle functions (e.g., get_account_balance)
                     if "function_call" in delta:
                         function_call = delta.get("function_call", {})
-                        #print("Function Call:", function_call)
-                        # Upewnij się, że "name" istniejeo wieku
                         function_name = function_call.get("name","")
-                        #print(function_name)
+                    #    arguments = json.loads(function_call.get("arguments", "{}"))
+
                         if function_name == "get_account_balance":
 
-                            #arguments = json.loads(function_call.get("arguments", "{}"))
-                            arguments = user_id
-                            print("### Wywołano get_account_balance ###")
+                            #user_id = arguments.get("user_id")
+                            
+                            print("### Called get_account_balance ###")
                             balance_info = get_account_balance(user_id)
                             if balance_info:
-                                #system_message += f"Stan konta wynosi {balance_info['balance']} {balance_info['currency']}."
+
                                 yield (
                                     f"data: Stan twojego konta wynosi {balance_info['balance']} "
                                     f"{balance_info['currency']}.\n\n"   
@@ -179,20 +203,20 @@ def stream():
                                 yield f"data: Nie znaleziono konta dla podanego ID użytkownika.\n\n"
 
                         if function_name == "get_user_info":
-                            arguments = user_id
-                            print("### Wywołano get_user_info ###")
+                            #user_id = arguments.get("user_id")
+                            print("### Called get_user_info ###")
                             user_info = get_user_info(user_id)
                             if user_info:
                                 yield (
                                     f"data: Nazywasz się {user_info['name']} "
-                                    f"i masz {user_info['wiek'] } lat.\n\n"
+                                    f"i masz {user_info['age'] } lat.\n\n"
 
                                 )
-                                #system_message += f"Użytkownik ma na imię {user_info['name']} i ma {user_info['wiek']} lat."
+
                             else:
                                 yield f"data: Nie znaleziono użytkownika dla podanego ID.\n\n"
                         if function_name == "get_todays_games":
-                            print("### Wywołano get_todays_games ###")
+                            print("### Called get_todays_games ###")
                             games = get_todays_games()
                             if games:
                                 yield "data: Oto lista dzisiejszych gier:\n\n\n"
@@ -205,7 +229,7 @@ def stream():
 
         except Exception as e:
             app.logger.error(f"Error: {str(e)}")
-            yield f"data: Błąd: {str(e)}\n\n"
+            yield "data: Wystąpił błąd podczas przetwarzania Twojej prośby. Proszę spróbować ponownie później.\n\n"
     return Response(generate(), content_type="text/event-stream")
 
 if __name__ == "__main__":
