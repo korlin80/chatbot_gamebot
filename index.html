@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
     <h1 style="text-align: center; color: orange">Chatbot GPT - GameBot</h1>
     <div id="userChoice">
         <form id="userForm">
@@ -43,37 +42,43 @@
         }
 
         // Wysyłanie wiadomości do serwera
- async function sendMessage() {
-    const userIdElement = document.getElementById("user_id");
-    const user_id = userIdElement.value; // Pobierz user_id
-    const userInput = document.getElementById("user-input");
-    const message = userInput.value.trim();
+        async function sendMessage() {
+            const userIdElement = document.getElementById("user_id");
+            const user_id = userIdElement.value; // Pobierz user_id
+            const userInput = document.getElementById("user-input");
+            const message = userInput.value.trim();
 
-    if (!message) return;
+            if (!message) return;
 
-    addMessage(message, "user");
-    userInput.value = "";
+            addMessage(message, "user");
+            userInput.value = "";
 
-    try {
-        const response = await fetch("http://127.0.0.1:5000/chat", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ message, user_id }), // Przesyłanie user_id
-        });
+            try {
+                console.log("Podejmoje probe polaczenia.");
+                const eventSource = new EventSource("http://127.0.0.1:5000/chat", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
 
-        const data = await response.json();
+                    body: JSON.stringify({ message: message, user_id: user_id })
+                });
+                console.log(message)
+                console.log(user_id)
+                // Obsługuje przychodzące dane
+                eventSource.onmessage = function(event) {
+                    addMessage(event.data, "bot");
+                };
 
-        if (response.ok) {
-            addMessage(data.reply, "bot");
-        } else {
-            addMessage("Błąd: " + data.error, "bot");
+                // Obsługuje zakończenie połączenia
+                eventSource.onclose = function() {
+                    console.log("Połączenie zamknięte.");
+                };
+            } catch (error) {
+            addMessage("Błąd połączenia z serwerem!", "bot");
+            }
         }
-    } catch (error) {
-        addMessage("Błąd połączenia z serwerem!", "bot");
-    }
-}
+
     </script>
 </body>
 </html>
