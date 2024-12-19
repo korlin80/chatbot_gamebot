@@ -6,8 +6,86 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chatbot Streaming</title>
     <script>
+        let loggedInUser = null; // Stores the currently logged-in user
+        user_id = null;
+        async function handleLogin() {
+            const user_id = document.getElementById("user_id_input").value.trim();
+
+            if (!user_id) {
+                alert("Proszę wprowadzić ID użytkownika.");
+                return;
+            }
+
+            try {
+                const response = await fetch("/login", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ user_id })
+                });
+
+                if (!response.ok) {
+                    throw new Error("Login failed: " + response.statusText);
+                }
+
+                const result = await response.json();
+                console.log(result.message);
+                loggedInUser = user_id;
+
+                alert(`Zalogowano użytkownika: ${user_id}`);
+                toggleLoginState(true); // Update UI to logged-in state
+                clearMessages(); // Clear previous chat messages
+            } catch (error) {
+                console.error("Wystąpił błąd podczas logowania:", error);
+                alert("Nie udało się zalogować użytkownika.");
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                const response = await fetch("/logout", { method: "GET" });
+                clearMessages()
+                if (!response.ok) {
+                    throw new Error("Logout failed: " + response.statusText);
+                }
+
+                const result = await response.json();
+                console.log(result.message);
+                loggedInUser = null;
+                
+                alert("Wylogowano pomyślnie.");
+                toggleLoginState(false); // Update UI to logged-out state
+            } catch (error) {
+                console.error("Wystąpił błąd podczas wylogowywania:", error);
+                alert("Nie udało się wylogować użytkownika.");
+            }
+        }
+
+        function toggleLoginState(isLoggedIn) {
+            const loginButton = document.getElementById("login-button");
+            const logoutButton = document.getElementById("logout-button");
+            const userIdInput = document.getElementById("user_id_input");
+
+            if (isLoggedIn) {
+                loginButton.style.display = "none";
+                logoutButton.style.display = "inline-block";
+                userIdInput.disabled = true; // Disable input when logged in
+            } else {
+                loginButton.style.display = "inline-block";
+                logoutButton.style.display = "none";
+                userIdInput.disabled = false; // Enable input when logged out
+                userIdInput.value = ""; // Clear input field
+            }
+        }
+
+
         async function sendMessage(question="") {
-            const user_id = document.getElementById("user_id").value;
+            if (!loggedInUser) {
+                alert("Najpierw zaloguj się jako użytkownik.");
+                return;
+            }
+
             const messageInput = document.getElementById("message");
             const message = messageInput.value || question;
             const chatBox = document.getElementById("chat");
@@ -81,10 +159,7 @@
                 }
             });
             // Nasłuchiwanie na zmianę użytkownika
-            const userSelect = document.getElementById("userForm");
-            userSelect.addEventListener("change", () => {
-                clearMessages();  // Czyści wiadomości po zmianie użytkownika
-            });
+         
             // Funkcja obsługująca kliknięcie przycisku "Jaki jest mój stan konta?"
             const accountButton = document.getElementById("account-button");
             accountButton.addEventListener("click", () => {
@@ -106,21 +181,19 @@
 <body>
     <div>
             <h1 style="text-align: center; color: orange">Chatbot GPT - GameBot</h1>
-            <div id="userChoice">
-                <form id="userForm">
-                    <select id="user_id" name="user_id">
-                        <option value="123">Paweł</option>
-                        <option value="456">Tomasz</option>
-                        <option value="789">Jan</option>
-                    </select>
-                </form>
+            <div id="userLogin">
+                <input type="text" id="user_id_input" placeholder="Wprowadź ID użytkownika" />
+                <button id="login-button" onclick="handleLogin()">Login</button>
+                <button id="logout-button" onclick="handleLogout()" style="display: none;">Logout</button>
             </div>
 
         <div id="chat"></div>
+
         <div id="input-box">
             <input type="text" id="message" placeholder="Wpisz wiadomość" />
             <button onclick="sendMessage()">Wyślij</button>
         </div>
+        
         <div id="button-box">
             <button id="clear" onclick="clearMessages()">Wyczyść</button>
             <button id="account-button">Stan konta</button>

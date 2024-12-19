@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, stream_with_context, Response, render_template
+from flask import Flask, request, jsonify, stream_with_context, Response, render_template, session
 #from flask_cors import CORS
 import openai
 import json
@@ -13,6 +13,7 @@ if not api_key:
 openai.api_key = api_key
 
 app = Flask(__name__)
+app.secret_key = 'my_own_secret_key_haha'
 
 def get_account_balance(user_id):
 
@@ -28,9 +29,6 @@ def get_account_balance(user_id):
     return accounts.get(user_id, None)  # Return None if the account does not exist
 
 def get_user_info(user_id):
-
-    #print("##### funkcja: get_user_info ###")
-    #print(user_id)
 
     users = {
 
@@ -50,7 +48,6 @@ def get_todays_games():
         {"home_team": "Juventus", "away_team": "Inter Milan", "time": "21:00"},
     ]
     return games
-
 
 
 # Functions handled by GPT
@@ -114,17 +111,31 @@ def prepareAccoutnInformationForAssisten(user_id):
 
 @app.route("/")
 
+# Endpoint for streaming responses
+
+@app.route("/")
 def index():
     return render_template("index.html")
 
+@app.route("/login", methods=["POST"])
+def login():
+    user_id = request.json.get("user_id", "").strip()
+    if not user_id:
+        return jsonify({"error": "Brak user_id"}), 400
+    session['user_id'] = user_id
+    return jsonify({"message": f"Zalogowano uzytkownika o ID {user_id}"}), 200
 
-# Endpoint for streaming responses
+@app.route("/logout", methods=["GET"])
+def logout():
+    session.pop("user_id", None)
+    return jsonify({"message": "Wylogowano pomyślnie"}), 200
+
 
 @app.route("/stream", methods=["POST"])
 def stream():
-    user_input = request.json.get("message", "").strip()
-    user_id = request.json.get("user_id", "").strip()
 
+    user_input = request.json.get("message", "").strip()
+    user_id = session.get("user_id", "")
 
     #print("User input :",user_input)
     #print("User Id :",user_id)
@@ -133,7 +144,7 @@ def stream():
     if not user_input:
         return Response("Brak wiadomości", status=400)
     if not user_id:
-        return Response("Brak user_id", status=400)
+        return Response("Brak user_id w sesji. Zaloguj się ponownie.", status=400)
 
     # Generator function for streaming
     def generate():
